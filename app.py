@@ -17,28 +17,21 @@ RECIPIENT_EMAIL = os.getenv("RECIPIENT_EMAIL")
 sqs = boto3.client('sqs', region_name=AWS_REGION)
 client = boto3.client('ses',region_name=AWS_REGION)
 
-CONFIGURATION_SET = "ConfigSet"
-
-
-def send_email():
+def send_email(json_body):
     # The subject line for the email.
-    SUBJECT = "Amazon SES Test (SDK for Python)"
+    SUBJECT = f"{json_body.get("title")}"
 
     # The email body for recipients with non-HTML email clients.
-    BODY_TEXT = ("Amazon SES Test (Python)\r\n"
-                 "This email was sent with Amazon SES using the "
-                 "AWS SDK for Python (Boto)."
+    BODY_TEXT = (f"{json_body.get("title")}\r\n"
+                 f"{json_body.get("desc")}"
                  )
 
     # The HTML body of the email.
-    BODY_HTML = """<html>
+    BODY_HTML = f"""<html>
     <head></head>
     <body>
-      <h1>Amazon SES Test (SDK for Python)</h1>
-      <p>This email was sent with
-        <a href='https://aws.amazon.com/ses/'>Amazon SES</a> using the
-        <a href='https://aws.amazon.com/sdk-for-python/'>
-          AWS SDK for Python (Boto)</a>.</p>
+      <h1>{json_body.get("title")}</h1>
+      <p>{json_body.get("desc")}</p>
     </body>
     </html>
                 """
@@ -72,9 +65,6 @@ def send_email():
                 },
             },
             Source=SENDER_EMAIL,
-            # If you are not using a configuration set, comment or delete the
-            # following line
-            # ConfigurationSetName=CONFIGURATION_SET,
         )
     # Display an error if something goes wrong.
     except ClientError as e:
@@ -127,6 +117,8 @@ def get_messages():
             print(f"Message contents {json_body}")
             print(f"Title: {json_body.get("title")}")
 
+            send_email(json_body)
+
         except:
             pass
         time.sleep(1)
@@ -135,5 +127,4 @@ def get_messages():
 if __name__ == '__main__':
     # app = create_app()
     # app.run()
-    # get_messages()
-    send_email()
+    get_messages()
