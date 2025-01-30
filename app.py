@@ -1,5 +1,6 @@
 import json
 import os
+import threading
 import time
 
 from botocore.exceptions import ClientError
@@ -76,16 +77,15 @@ def send_email(json_body):
 def create_app():
     app = Flask(__name__)
 
-    @app.route("/")
+    # http://localhost:5003/health
+    @app.route("/health", methods=["GET"])
     def home():
         print(f"{AWS_REGION} {AWS_QUEUE}")
-        return "<h1>test</h1>", 200
+        return "Healthy", 200
 
     return app
 
 def get_messages():
-    print("TEST")
-    print(f"{AWS_REGION} {AWS_QUEUE}")
     while True:
         try:
             response = sqs.receive_message(
@@ -109,13 +109,11 @@ def get_messages():
                 QueueUrl=AWS_QUEUE,
                 ReceiptHandle=receipt_handle
             )
-            print('Received and deleted message: %s' % message)
 
             body = message['Body']
             body = body.replace("\'", "\"") # WHY?????
             json_body = json.loads(body)
             print(f"Message contents {json_body}")
-            print(f"Title: {json_body.get("title")}")
 
             send_email(json_body)
 
@@ -125,6 +123,6 @@ def get_messages():
 
 
 if __name__ == '__main__':
-    # app = create_app()
-    # app.run()
-    get_messages()
+    app = create_app()
+    threading.Thread(target=lambda: app.run(port=5003)).start()
+    threading.Thread(target=lambda: get_messages()).start()
