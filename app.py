@@ -70,9 +70,11 @@ def send_email(json_body):
     # Display an error if something goes wrong.
     except ClientError as e:
         print(e.response['Error']['Message'])
+        return "Email failure"
     else:
         print("Email sent! Message ID:"),
         print(response['MessageId'])
+        return "Email sent!"
 
 def create_app():
     app = Flask(__name__)
@@ -114,6 +116,9 @@ def get_messages():
             body = body.replace("\'", "\"") # WHY?????
             json_body = json.loads(body)
             print(f"Message contents {json_body}")
+
+            if body.get("title") is None or body.get("desc") is None or body.get("prio") is None:
+                continue
 
             send_email(json_body)
 
