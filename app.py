@@ -6,7 +6,7 @@ import time
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
 import boto3
-from flask import Flask
+from flask import Flask, jsonify
 
 load_dotenv()
 
@@ -81,9 +81,8 @@ def create_app():
 
     # http://localhost:5003/health
     @app.route("/health", methods=["GET"])
-    def home():
-        print(f"{AWS_REGION} {AWS_QUEUE}")
-        return "Healthy", 200
+    def health():
+        return jsonify({"status":"Healthy"}), 200
 
     return app
 
@@ -113,12 +112,12 @@ def get_messages():
             )
 
             body = message['Body']
-            body = body.replace("\'", "\"") # WHY?????
+            body = body.replace("\'", "\"")
             json_body = json.loads(body)
             print(f"Message contents {json_body}")
 
-            if body.get("title") is None or body.get("desc") is None or body.get("prio") is None:
-                continue
+            # if body.get("title") is None or body.get("desc") is None or body.get("prio") is None:
+            #     continue
 
             send_email(json_body)
 
@@ -126,8 +125,12 @@ def get_messages():
             pass
         time.sleep(1)
 
-
+#Docker: docker run --env-file ./.env -p 8083:8083 --rm p3service-flask-app
 if __name__ == '__main__':
     app = create_app()
     threading.Thread(target=lambda: app.run(port=5003)).start()
+    threading.Thread(target=lambda: get_messages()).start()
+else:
+    print("Running not main")
+    app = create_app()
     threading.Thread(target=lambda: get_messages()).start()
