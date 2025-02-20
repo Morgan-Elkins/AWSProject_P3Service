@@ -18,6 +18,8 @@ RECIPIENT_EMAIL = os.getenv("RECIPIENT_EMAIL")
 sqs = boto3.client('sqs', region_name=AWS_REGION)
 client = boto3.client('ses',region_name=AWS_REGION)
 
+app = Flask(__name__)
+
 def send_email(json_body):
     # The subject line for the email.
     SUBJECT = f"{json_body.get("title")}"
@@ -76,15 +78,10 @@ def send_email(json_body):
         print(response['MessageId'])
         return "Email sent!"
 
-def create_app():
-    app = Flask(__name__)
-
-    # http://localhost:5003/health
-    @app.route("/health", methods=["GET"])
-    def health():
-        return jsonify({"status":"Healthy"}), 200
-
-    return app
+# http://localhost:5003/health
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status":"Healthy"}), 200
 
 def get_messages():
     while True:
@@ -124,12 +121,13 @@ def get_messages():
             pass
         time.sleep(1)
 
+def background_thread():
+    thread = threading.Thread(target=get_messages, daemon=True)
+    thread.start()
+    return thread
+
+bg_thread = background_thread()
+
 #Docker: docker run --env-file ./.env -p 8083:8083 --rm p3service-flask-app
 if __name__ == '__main__':
-    app = create_app()
-    threading.Thread(target=lambda: app.run(port=5003)).start()
-    threading.Thread(target=lambda: get_messages()).start()
-else:
-    print("Running not main")
-    app = create_app()
-    threading.Thread(target=lambda: get_messages()).start()
+    threading.Thread(target=lambda: app.run()).start()
