@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 import boto3
 from flask import Flask, jsonify
 
+from botocore.exceptions import ClientError
+
 load_dotenv()
 
 AWS_REGION = os.getenv("AWS_REGION")
@@ -19,6 +21,41 @@ sqs = boto3.client('sqs', region_name=AWS_REGION)
 client = boto3.client('ses',region_name=AWS_REGION)
 
 app = Flask(__name__)
+
+# Bedrock client
+
+bedrock_client = boto3.client(
+    service_name="bedrock-runtime",
+    region_name="eu-west-2"
+)
+
+model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
+
+def getLLMmessage(userMessage):
+    # Start a conversation with the user message.
+    user_message = userMessage
+    conversation = [
+        {
+            "role": "user",
+            "content": [{"text": user_message}],
+        }
+    ]
+
+    try:
+        # Send the message to the model, using a basic inference configuration.
+        response = bedrock_client.converse(
+            modelId=model_id,
+            messages=conversation,
+            inferenceConfig={"maxTokens": 512, "temperature": 0.5, "topP": 0.9},
+        )
+
+        # Extract and print the response text.
+        response_text = response["output"]["message"]["content"][0]["text"]
+        return response_text
+    except (ClientError, Exception) as e:
+        print(f"ERROR: Can't invoke '{model_id}'. Reason: {e}")
+        return ""
+
 
 def send_email(json_body):
     # The subject line for the email.
@@ -35,6 +72,8 @@ def send_email(json_body):
     <body>
       <h1>{json_body.get("title")}</h1>
       <p>{json_body.get("desc")}</p>
+      <br>
+      <p>**A suggested improvement is**: {getLLMmessage(str(json_body.get('desc')))}</p>
     </body>
     </html>
                 """
