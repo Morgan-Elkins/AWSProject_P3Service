@@ -74,7 +74,7 @@ def send_email(json_body):
       <h1>{json_body.get("title")}</h1>
       <p>{json_body.get("desc")}</p>
       <br>
-      <p><b>A suggested improvement is <b>: {markdown.markdown(getLLMmessage(str(json_body.get('desc'))))}</p>
+      <p><b>A suggested improvement is </b>: {markdown.markdown(getLLMmessage(str(json_body.get('desc'))))}</p>
     </body>
     </html>
                 """
